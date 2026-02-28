@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineErmurat — Фильмы</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">🎬 CineErmurat</div>
+  <ul class="nav-links">
+    <li><a href="index.html">Главная</a></li>
+    <li><a href="movies.html" class="active">Фильмы</a></li>
+    <li><a href="cinemas.html">Кинотеатры</a></li>
+    <li><a href="viewers.html">Зрители</a></li>
+    <li><a href="tickets.html">Билеты</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🎥 Все фильмы</h1>
+  <p>Выберите фильм и забронируйте билет онлайн</p>
+</div>
+
+<div class="toolbar">
+  <input class="search-input" id="search" placeholder="🔍 Поиск по названию..."/>
+  <select class="select-input" id="filter-genre">
+    <option value="">Все жанры</option>
+    <option>Драма</option>
+    <option>Научная фантастика</option>
+    <option>Боевик</option>
+    <option>Триллер</option>
+    <option>Комедия</option>
+    <option>Ужасы</option>
+    <option>Мелодрама</option>
+    <option>Документальный</option>
+    <option>Анимация</option>
+  </select>
+  <select class="select-input" id="filter-cinema">
+    <option value="">Все кинотеатры</option>
+  </select>
+  <button class="btn btn-primary" onclick="openModal('modal-add-movie')">＋ Добавить фильм</button>
+</div>
+
+<div class="section" style="padding-top:30px">
+  <div id="movies-container" class="movies-grid">
+    <div class="skeleton"></div><div class="skeleton"></div>
+    <div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</div>
+
+<!-- Модалка: добавить / редактировать фильм -->
+<div class="modal-overlay" id="modal-add-movie">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-movie-title">➕ Новый фильм</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-movie')">✕</button>
+    </div>
+    <form id="movie-form" onsubmit="submitMovieForm(event)">
+      <input type="hidden" id="movie-id"/>
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input class="form-input" id="movie-title" placeholder="Название фильма" required/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Жанр</label>
+          <select class="form-input" id="movie-genre" required>
+            <option value="">Выбрать...</option>
+            <option>Драма</option><option>Научная фантастика</option>
+            <option>Боевик</option><option>Триллер</option>
+            <option>Комедия</option><option>Ужасы</option>
+            <option>Мелодрама</option><option>Документальный</option>
+            <option>Анимация</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Режиссёр</label>
+          <input class="form-input" id="movie-director" placeholder="Имя режиссёра" required/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Длительность (мин)</label>
+          <input class="form-input" id="movie-duration" type="number" min="1" placeholder="120" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Цена (₸)</label>
+          <input class="form-input" id="movie-price" type="number" min="0" placeholder="1500" required/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Время сеанса</label>
+          <input class="form-input" id="movie-showtime" placeholder="2026-03-01 18:00" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Свободных мест</label>
+          <input class="form-input" id="movie-seats" type="number" min="0" placeholder="100" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Кинотеатр</label>
+        <select class="form-input" id="movie-cinema" required>
+          <option value="">Выбрать кинотеатр...</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-add-movie')">Отмена</button>
+        <button type="submit" class="btn btn-primary" id="movie-submit-btn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">🎬 CineErmurat</div>
+    <p>Автор: <strong>Ермурат</strong> &nbsp;|&nbsp; © 2026</p>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script>
+  let allMovies = [];
+  let allCinemas = [];
+
+  async function init() {
+    allMovies  = await API.getMovies();
+    allCinemas = await API.getCinemas();
+    renderCinemaFilter();
+    renderCinemaSelect();
+    renderMovies(allMovies);
+  }
+
+  function renderCinemaFilter() {
+    const sel = document.getElementById('filter-cinema');
+    allCinemas.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name;
+      sel.appendChild(o);
+    });
+  }
+
+  function renderCinemaSelect() {
+    const sel = document.getElementById('movie-cinema');
+    sel.innerHTML = '<option value="">Выбрать кинотеатр...</option>';
+    allCinemas.forEach(c => {
+      sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+  }
+
+  function renderMovies(movies) {
+    const el = document.getElementById('movies-container');
+    if (!movies.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🎬</div><p>Фильмы не найдены</p></div>';
+      return;
+    }
+    el.innerHTML = '';
+    movies.forEach(m => {
+      const cinema = allCinemas.find(c => c.id === m.cinemaId);
+      el.innerHTML += `
+        <div class="movie-card">
+          <div class="movie-poster">${genreEmoji(m.genre)}</div>
+          <div class="movie-info">
+            <h3>${m.title}</h3>
+            <div class="movie-meta">
+              <span class="badge">${m.genre}</span>
+              <span class="badge badge-dark">⏱ ${m.durationMinutes} мин</span>
+            </div>
+            <p class="movie-director">🎬 ${m.director}</p>
+            <p class="movie-time">🕐 ${m.showTime}</p>
+            ${cinema ? `<p style="font-size:.82em;color:var(--grey)">🏛️ ${cinema.name}</p>` : ''}
+            <div class="movie-footer">
+              <span class="price">${m.price.toLocaleString()} ₸</span>
+              <span class="seats ${m.availableSeats < 10 ? 'seats-low' : ''}">💺 ${m.availableSeats} мест</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <a href="tickets.html?movieId=${m.id}" class="btn btn-primary" style="flex:1;justify-content:center">🎟️ Купить</a>
+              <button class="btn btn-sm" onclick="editMovie(${m.id})" title="Редактировать">✏️</button>
+              <button class="btn btn-danger" onclick="removeMovie(${m.id})" title="Удалить">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+    });
+  }
+
+  function filterMovies() {
+    const q    = document.getElementById('search').value.toLowerCase();
+    const genre = document.getElementById('filter-genre').value;
+    const cid   = document.getElementById('filter-cinema').value;
+    renderMovies(allMovies.filter(m =>
+      (!q     || m.title.toLowerCase().includes(q)) &&
+      (!genre || m.genre === genre) &&
+      (!cid   || String(m.cinemaId) === cid)
+    ));
+  }
+
+  document.getElementById('search').addEventListener('input', filterMovies);
+  document.getElementById('filter-genre').addEventListener('change', filterMovies);
+  document.getElementById('filter-cinema').addEventListener('change', filterMovies);
+
+  async function submitMovieForm(e) {
+    e.preventDefault();
+    const id = document.getElementById('movie-id').value;
+    const data = {
+      title:          document.getElementById('movie-title').value,
+      genre:          document.getElementById('movie-genre').value,
+      director:       document.getElementById('movie-director').value,
+      durationMinutes:parseInt(document.getElementById('movie-duration').value),
+      price:          parseFloat(document.getElementById('movie-price').value),
+      showTime:       document.getElementById('movie-showtime').value,
+      availableSeats: parseInt(document.getElementById('movie-seats').value),
+      cinemaId:       parseInt(document.getElementById('movie-cinema').value),
+    };
+    try {
+      if (id) { await API.updateMovie(id, data); showToast('Фильм обновлён ✅'); }
+      else     { await API.createMovie(data);     showToast('Фильм добавлен ✅'); }
+      closeModal('modal-add-movie');
+      allMovies = await API.getMovies();
+      filterMovies();
+    } catch(err) { showToast(err.error || 'Ошибка', 'error'); }
+  }
+
+  function editMovie(id) {
+    const m = allMovies.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('modal-movie-title').textContent = '✏️ Редактировать фильм';
+    document.getElementById('movie-id').value       = m.id;
+    document.getElementById('movie-title').value    = m.title;
+    document.getElementById('movie-genre').value    = m.genre;
+    document.getElementById('movie-director').value = m.director;
+    document.getElementById('movie-duration').value = m.durationMinutes;
+    document.getElementById('movie-price').value    = m.price;
+    document.getElementById('movie-showtime').value = m.showTime;
+    document.getElementById('movie-seats').value    = m.availableSeats;
+    document.getElementById('movie-cinema').value   = m.cinemaId;
+    openModal('modal-add-movie');
+  }
+
+  async function removeMovie(id) {
+    const ok = await confirmAction('Вы уверены, что хотите удалить этот фильм?');
+    if (!ok) return;
+    try {
+      await API.deleteMovie(id);
+      showToast('Фильм удалён');
+      allMovies = await API.getMovies();
+      filterMovies();
+    } catch(err) { showToast(err.error || 'Ошибка', 'error'); }
+  }
+
+  // Сбросить форму при открытии на добавление
+  document.querySelector('[onclick="openModal(\'modal-add-movie\')"]').addEventListener('click', () => {
+    document.getElementById('modal-movie-title').textContent = '➕ Новый фильм';
+    document.getElementById('movie-form').reset();
+    document.getElementById('movie-id').value = '';
+  });
+
+  init();
+</script>
+</body>
+</html>
+

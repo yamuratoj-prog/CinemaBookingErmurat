@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineErmurat — Зрители</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">🎬 CineErmurat</div>
+  <ul class="nav-links">
+    <li><a href="index.html">Главная</a></li>
+    <li><a href="movies.html">Фильмы</a></li>
+    <li><a href="cinemas.html">Кинотеатры</a></li>
+    <li><a href="viewers.html" class="active">Зрители</a></li>
+    <li><a href="tickets.html">Билеты</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>👥 Зрители</h1>
+  <p>Список зарегистрированных пользователей системы</p>
+</div>
+
+<div class="toolbar">
+  <input class="search-input" id="search" placeholder="🔍 Поиск по имени или email..."/>
+  <button class="btn btn-primary" onclick="openAddModal()">＋ Добавить зрителя</button>
+</div>
+
+<div class="table-wrap" style="margin-top:30px">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Имя</th>
+        <th>Email</th>
+        <th>Телефон</th>
+        <th>Возраст</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody id="viewers-tbody">
+      <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--grey)">Загрузка...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Модалка: добавить/редактировать -->
+<div class="modal-overlay" id="modal-viewer">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-viewer-title">➕ Новый зритель</h3>
+      <button class="modal-close" onclick="closeModal('modal-viewer')">✕</button>
+    </div>
+    <form id="viewer-form" onsubmit="submitViewer(event)">
+      <input type="hidden" id="viewer-id"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Имя</label>
+          <input class="form-input" id="viewer-firstname" placeholder="Ермурат" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Фамилия</label>
+          <input class="form-input" id="viewer-lastname" placeholder="Досов" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="viewer-email" type="email" placeholder="ermurat@mail.ru" required/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Телефон</label>
+          <input class="form-input" id="viewer-phone" placeholder="+7-705-000-00-00" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Возраст</label>
+          <input class="form-input" id="viewer-age" type="number" min="1" max="120" placeholder="22" required/>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-viewer')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Модалка: билеты зрителя -->
+<div class="modal-overlay" id="modal-viewer-tickets">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h3 id="modal-vt-title">🎟️ Билеты зрителя</h3>
+      <button class="modal-close" onclick="closeModal('modal-viewer-tickets')">✕</button>
+    </div>
+    <div id="viewer-tickets-list" style="max-height:420px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">🎬 CineErmurat</div>
+    <p>Автор: <strong>Ермурат</strong> &nbsp;|&nbsp; © 2026</p>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script>
+  let allViewers = [];
+  let allMovies  = [];
+
+  async function init() {
+    [allViewers, allMovies] = await Promise.all([API.getViewers(), API.getMovies()]);
+    renderViewers(allViewers);
+  }
+
+  function renderViewers(list) {
+    const tb = document.getElementById('viewers-tbody');
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:60px;color:var(--grey)">🔍 Зрители не найдены</td></tr>';
+      return;
+    }
+    tb.innerHTML = list.map(v => `
+      <tr>
+        <td><span class="badge badge-dark">#${v.id}</span></td>
+        <td><strong>${v.firstName} ${v.lastName}</strong></td>
+        <td style="color:var(--grey)">${v.email}</td>
+        <td style="color:var(--grey)">${v.phone}</td>
+        <td><span class="badge">${v.age} лет</span></td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-sm" onclick="showViewerTickets(${v.id},'${v.firstName} ${v.lastName}')">🎟️</button>
+            <button class="btn btn-sm" onclick="editViewer(${v.id})">✏️</button>
+            <button class="btn btn-danger" onclick="removeViewer(${v.id})">🗑️</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  document.getElementById('search').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    renderViewers(allViewers.filter(v =>
+      `${v.firstName} ${v.lastName}`.toLowerCase().includes(q) ||
+      v.email.toLowerCase().includes(q)
+    ));
+  });
+
+  function openAddModal() {
+    document.getElementById('modal-viewer-title').textContent = '➕ Новый зритель';
+    document.getElementById('viewer-form').reset();
+    document.getElementById('viewer-id').value = '';
+    openModal('modal-viewer');
+  }
+
+  function editViewer(id) {
+    const v = allViewers.find(x => x.id === id);
+    if (!v) return;
+    document.getElementById('modal-viewer-title').textContent = '✏️ Редактировать зрителя';
+    document.getElementById('viewer-id').value        = v.id;
+    document.getElementById('viewer-firstname').value = v.firstName;
+    document.getElementById('viewer-lastname').value  = v.lastName;
+    document.getElementById('viewer-email').value     = v.email;
+    document.getElementById('viewer-phone').value     = v.phone;
+    document.getElementById('viewer-age').value       = v.age;
+    openModal('modal-viewer');
+  }
+
+  async function submitViewer(e) {
+    e.preventDefault();
+    const id = document.getElementById('viewer-id').value;
+    const data = {
+      firstName: document.getElementById('viewer-firstname').value,
+      lastName:  document.getElementById('viewer-lastname').value,
+      email:     document.getElementById('viewer-email').value,
+      phone:     document.getElementById('viewer-phone').value,
+      age:       parseInt(document.getElementById('viewer-age').value),
+    };
+    try {
+      if (id) { await API.updateViewer(id, data); showToast('Данные обновлены ✅'); }
+      else     { await API.createViewer(data);     showToast('Зритель добавлен ✅'); }
+      closeModal('modal-viewer');
+      allViewers = await API.getViewers();
+      renderViewers(allViewers);
+    } catch(err) { showToast(err.error || 'Ошибка', 'error'); }
+  }
+
+  async function removeViewer(id) {
+    const ok = await confirmAction('Удалить зрителя? Это действие нельзя отменить.');
+    if (!ok) return;
+    try {
+      await API.deleteViewer(id);
+      showToast('Зритель удалён');
+      allViewers = await API.getViewers();
+      renderViewers(allViewers);
+    } catch(err) { showToast(err.error || 'Ошибка', 'error'); }
+  }
+
+  async function showViewerTickets(viewerId, name) {
+    document.getElementById('modal-vt-title').textContent = `🎟️ Билеты — ${name}`;
+    const el = document.getElementById('viewer-tickets-list');
+    el.innerHTML = '<div class="skeleton" style="height:80px;margin:10px 0"></div>';
+    openModal('modal-viewer-tickets');
+    try {
+      const tickets = await API.ticketsByViewer(viewerId);
+      if (!tickets.length) { el.innerHTML = '<div class="empty-state" style="padding:40px"><p>Нет билетов</p></div>'; return; }
+      el.innerHTML = tickets.map(t => {
+        const movie = allMovies.find(m => m.id === t.movieId);
+        return `
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;border-bottom:1px solid var(--dark4)">
+            <div style="font-size:1.8em">🎟️</div>
+            <div style="flex:1">
+              <strong>${movie ? movie.title : 'Фильм #' + t.movieId}</strong>
+              <div style="font-size:.82em;color:var(--grey);margin-top:4px">Место: ${t.seatNumber} &bull; ${t.bookingTime}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:800;color:var(--gold)">${t.totalPrice.toLocaleString()} ₸</div>
+              <span class="badge ${t.status==='BOOKED'?'badge-green':'badge-dark'}">${t.status==='BOOKED'?'✅ Активен':'❌ Отменён'}</span>
+            </div>
+          </div>`;
+      }).join('');
+    } catch { el.innerHTML = '<div class="empty-state" style="padding:40px"><p>Нет билетов</p></div>'; }
+  }
+
+  init();
+</script>
+</body>
+</html>
+

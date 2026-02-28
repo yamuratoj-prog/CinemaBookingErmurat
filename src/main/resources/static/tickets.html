@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineErmurat — Билеты</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">🎬 CineErmurat</div>
+  <ul class="nav-links">
+    <li><a href="index.html">Главная</a></li>
+    <li><a href="movies.html">Фильмы</a></li>
+    <li><a href="cinemas.html">Кинотеатры</a></li>
+    <li><a href="viewers.html">Зрители</a></li>
+    <li><a href="tickets.html" class="active">Билеты</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🎟️ Билеты</h1>
+  <p>Бронирование и управление билетами</p>
+</div>
+
+<div class="toolbar">
+  <select class="select-input" id="filter-status">
+    <option value="">Все статусы</option>
+    <option value="BOOKED">✅ Активные</option>
+    <option value="CANCELLED">❌ Отменённые</option>
+  </select>
+  <select class="select-input" id="filter-viewer">
+    <option value="">Все зрители</option>
+  </select>
+  <select class="select-input" id="filter-movie">
+    <option value="">Все фильмы</option>
+  </select>
+  <button class="btn btn-success" onclick="openModal('modal-book')">🎟️ Купить билет</button>
+</div>
+
+<div class="tickets-grid" id="tickets-container" style="padding-top:30px">
+  <div class="skeleton"></div><div class="skeleton"></div>
+  <div class="skeleton"></div><div class="skeleton"></div>
+</div>
+
+<!-- Модалка: купить билет -->
+<div class="modal-overlay" id="modal-book">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3>🎟️ Купить билет</h3>
+      <button class="modal-close" onclick="closeModal('modal-book')">✕</button>
+    </div>
+
+    <!-- Шаг 1: выбор фильма и зрителя -->
+    <div id="step-1">
+      <div class="form-group">
+        <label class="form-label">Зритель</label>
+        <select class="form-input" id="book-viewer" onchange="updatePrice()">
+          <option value="">Выбрать зрителя...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Фильм</label>
+        <select class="form-input" id="book-movie" onchange="onMovieSelect()">
+          <option value="">Выбрать фильм...</option>
+        </select>
+      </div>
+      <div id="movie-info-box" style="display:none;background:var(--dark3);border-radius:10px;padding:16px;margin-bottom:18px;border:1px solid var(--dark4)">
+        <div style="font-size:.88em;color:var(--grey)" id="movie-info-text"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Выберите место</label>
+        <div class="seat-legend">
+          <span><span class="legend-dot legend-free"></span>Свободно</span>
+          <span><span class="legend-dot legend-selected"></span>Выбрано</span>
+          <span><span class="legend-dot legend-taken"></span>Занято</span>
+        </div>
+        <div class="seat-grid" id="seat-grid"></div>
+        <div id="selected-seat-label" style="font-size:.85em;color:var(--grey);margin-top:8px"></div>
+      </div>
+      <div id="price-box" style="display:none;background:rgba(233,69,96,0.08);border:1px solid rgba(233,69,96,0.25);border-radius:10px;padding:14px;margin-bottom:18px;text-align:center">
+        <div style="font-size:.88em;color:var(--grey)">Итого к оплате</div>
+        <div style="font-size:2em;font-weight:900;color:var(--gold)" id="price-display">0 ₸</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal('modal-book')">Отмена</button>
+        <button class="btn btn-success" id="book-btn" onclick="bookTicket()" disabled>✅ Подтвердить покупку</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">🎬 CineErmurat</div>
+    <p>Автор: <strong>Ермурат</strong> &nbsp;|&nbsp; © 2026</p>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script>
+  let allTickets = [];
+  let allViewers = [];
+  let allMovies  = [];
+  let allCinemas = [];
+  let selectedSeat = null;
+  let takenSeats   = [];
+
+  async function init() {
+    [allTickets, allViewers, allMovies, allCinemas] = await Promise.all([
+      API.getTickets(), API.getViewers(), API.getMovies(), API.getCinemas()
+    ]);
+    populateSelects();
+    renderTickets(allTickets);
+
+    // Если пришли с movies.html с ?movieId=X
+    const params = new URLSearchParams(location.search);
+    const mid = params.get('movieId');
+    if (mid) {
+      openModal('modal-book');
+      document.getElementById('book-movie').value = mid;
+      await onMovieSelect();
+    }
+  }
+
+  function populateSelects() {
+    // Фильтры
+    const fv = document.getElementById('filter-viewer');
+    const fm = document.getElementById('filter-movie');
+    allViewers.forEach(v => fv.innerHTML += `<option value="${v.id}">${v.firstName} ${v.lastName}</option>`);
+    allMovies.forEach(m  => fm.innerHTML += `<option value="${m.id}">${m.title}</option>`);
+
+    // Форма бронирования
+    const bv = document.getElementById('book-viewer');
+    const bm = document.getElementById('book-movie');
+    bv.innerHTML = '<option value="">Выбрать зрителя...</option>';
+    bm.innerHTML = '<option value="">Выбрать фильм...</option>';
+    allViewers.forEach(v => bv.innerHTML += `<option value="${v.id}">${v.firstName} ${v.lastName}</option>`);
+    allMovies.forEach(m  => bm.innerHTML += `<option value="${m.id}">${m.title} (${m.price.toLocaleString()} ₸)</option>`);
+  }
+
+  function renderTickets(list) {
+    const el = document.getElementById('tickets-container');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🎟️</div><p>Билетов пока нет</p></div>';
+      return;
+    }
+    el.innerHTML = '';
+    list.forEach(t => {
+      const movie  = allMovies.find(m => m.id === t.movieId);
+      const viewer = allViewers.find(v => v.id === t.viewerId);
+      const cinema = allCinemas.find(c => c.id === t.cinemaId);
+      el.innerHTML += `
+        <div class="ticket-card">
+          <div class="ticket-header">
+            <div>
+              <h4>${movie ? movie.title : 'Фильм #' + t.movieId}</h4>
+              <div style="font-size:.78em;color:var(--grey);margin-top:4px">🎬 ${cinema ? cinema.name : ''}</div>
+            </div>
+            <span class="badge ${t.status==='BOOKED'?'badge-green':'badge-dark'}">${t.status==='BOOKED'?'✅ Активен':'❌ Отменён'}</span>
+          </div>
+          <div class="ticket-body">
+            <div class="ticket-row"><span>👤 Зритель</span><span>${viewer ? viewer.firstName+' '+viewer.lastName : '#'+t.viewerId}</span></div>
+            <div class="ticket-row"><span>💺 Место</span><span><strong>${t.seatNumber}</strong></span></div>
+            <div class="ticket-row"><span>🕐 Время</span><span>${t.bookingTime}</span></div>
+            <div class="ticket-row"><span>💰 Стоимость</span><span style="color:var(--gold);font-size:1.1em">${t.totalPrice.toLocaleString()} ₸</span></div>
+          </div>
+          <div class="ticket-footer">
+            <span style="font-size:.78em;color:var(--grey)">#${t.id}</span>
+            ${t.status==='BOOKED'
+              ? `<button class="btn btn-danger" onclick="cancelTicket(${t.id})">❌ Отменить</button>`
+              : `<span style="font-size:.82em;color:#eb5757">Билет отменён</span>`}
+          </div>
+        </div>`;
+    });
+  }
+
+  ['filter-status','filter-viewer','filter-movie'].forEach(id =>
+    document.getElementById(id).addEventListener('change', applyFilters)
+  );
+
+  function applyFilters() {
+    const status = document.getElementById('filter-status').value;
+    const vid    = document.getElementById('filter-viewer').value;
+    const mid    = document.getElementById('filter-movie').value;
+    renderTickets(allTickets.filter(t =>
+      (!status || t.status === status) &&
+      (!vid    || String(t.viewerId) === vid) &&
+      (!mid    || String(t.movieId)  === mid)
+    ));
+  }
+
+  async function onMovieSelect() {
+    selectedSeat = null;
+    document.getElementById('selected-seat-label').textContent = '';
+    document.getElementById('book-btn').disabled = true;
+    const mid = document.getElementById('book-movie').value;
+    if (!mid) { document.getElementById('movie-info-box').style.display = 'none'; buildSeatGrid([]); return; }
+
+    const movie = allMovies.find(m => m.id === parseInt(mid));
+    if (movie) {
+      document.getElementById('movie-info-box').style.display = 'block';
+      document.getElementById('movie-info-text').innerHTML =
+        `<strong>${movie.title}</strong> &bull; ${movie.genre} &bull; ⏱ ${movie.durationMinutes} мин<br>🕐 ${movie.showTime} &bull; 💺 Свободно: ${movie.availableSeats}`;
+    }
+
+    // Получить занятые места
+    try {
+      const tickets = await API.ticketsByMovie(mid);
+      takenSeats = tickets.filter(t=>t.status==='BOOKED').map(t=>t.seatNumber);
+    } catch { takenSeats = []; }
+
+    buildSeatGrid(takenSeats);
+    updatePrice();
+  }
+
+  function buildSeatGrid(taken) {
+    const grid = document.getElementById('seat-grid');
+    grid.innerHTML = '';
+    const rows = ['A','B','C','D','E','F'];
+    rows.forEach(row => {
+      for (let i = 1; i <= 8; i++) {
+        const seat = `${row}${i}`;
+        const btn  = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'seat-btn' + (taken.includes(seat) ? ' taken' : '');
+        btn.textContent = seat;
+        btn.title = seat;
+        if (!taken.includes(seat)) {
+          btn.onclick = () => selectSeat(seat, btn);
+        }
+        grid.appendChild(btn);
+      }
+    });
+  }
+
+  function selectSeat(seat, btn) {
+    document.querySelectorAll('.seat-btn.selected').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedSeat = seat;
+    document.getElementById('selected-seat-label').textContent = `Выбрано место: ${seat}`;
+    updateBookBtn();
+    updatePrice();
+  }
+
+  function updatePrice() {
+    const mid = document.getElementById('book-movie').value;
+    const movie = allMovies.find(m => m.id === parseInt(mid));
+    const box = document.getElementById('price-box');
+    if (movie && selectedSeat) {
+      box.style.display = 'block';
+      document.getElementById('price-display').textContent = movie.price.toLocaleString() + ' ₸';
+    } else {
+      box.style.display = 'none';
+    }
+  }
+
+  function updateBookBtn() {
+    const vid = document.getElementById('book-viewer').value;
+    const mid = document.getElementById('book-movie').value;
+    document.getElementById('book-btn').disabled = !(vid && mid && selectedSeat);
+  }
+
+  document.getElementById('book-viewer').addEventListener('change', updateBookBtn);
+  document.getElementById('book-movie').addEventListener('change', updateBookBtn);
+
+  async function bookTicket() {
+    const vid  = document.getElementById('book-viewer').value;
+    const mid  = document.getElementById('book-movie').value;
+    if (!vid || !mid || !selectedSeat) { showToast('Заполните все поля и выберите место', 'warning'); return; }
+    const btn = document.getElementById('book-btn');
+    btn.disabled = true; btn.textContent = '⏳ Оформление...';
+    try {
+      await API.bookTicket(vid, mid, selectedSeat);
+      showToast('🎉 Билет успешно забронирован!');
+      closeModal('modal-book');
+      [allTickets, allMovies] = await Promise.all([API.getTickets(), API.getMovies()]);
+      populateSelects();
+      applyFilters();
+    } catch(err) {
+      showToast(err.error || 'Ошибка бронирования', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '✅ Подтвердить покупку';
+    }
+  }
+
+  async function cancelTicket(id) {
+    const ok = await confirmAction('Отменить бронирование? Деньги будут возвращены условно.');
+    if (!ok) return;
+    try {
+      await API.cancelTicket(id);
+      showToast('Билет отменён');
+      [allTickets, allMovies] = await Promise.all([API.getTickets(), API.getMovies()]);
+      applyFilters();
+    } catch(err) { showToast(err.error || 'Ошибка', 'error'); }
+  }
+
+  // Сброс при открытии модалки
+  document.querySelector('[onclick="openModal(\'modal-book\')"]').addEventListener('click', () => {
+    selectedSeat = null;
+    document.getElementById('book-viewer').value = '';
+    document.getElementById('book-movie').value  = '';
+    document.getElementById('movie-info-box').style.display = 'none';
+    document.getElementById('price-box').style.display = 'none';
+    document.getElementById('selected-seat-label').textContent = '';
+    document.getElementById('book-btn').disabled = true;
+    buildSeatGrid([]);
+  });
+
+  init();
+</script>
+</body>
+</html>
+

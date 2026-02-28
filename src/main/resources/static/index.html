@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineErmurat — Главная</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">🎬 CineErmurat</div>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Главная</a></li>
+    <li><a href="movies.html">Фильмы</a></li>
+    <li><a href="cinemas.html">Кинотеатры</a></li>
+    <li><a href="viewers.html">Зрители</a></li>
+    <li><a href="tickets.html">Билеты</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="hero-content">
+    <h1>Добро пожаловать в<br/><span>CineErmurat</span></h1>
+    <p>Система онлайн-бронирования билетов в кинотеатр.<br/>Выбирай фильм, выбирай место — и наслаждайся!</p>
+    <div class="hero-btns">
+      <a href="movies.html" class="btn btn-primary">🎥 Смотреть фильмы</a>
+      <a href="tickets.html" class="btn btn-outline">🎟️ Мои билеты</a>
+    </div>
+  </div>
+  <div class="hero-visual"><div class="film-reel">🎞️</div></div>
+</section>
+
+<section class="stats-section">
+  <div class="stats-grid">
+    <div class="stat-card"><span class="stat-icon">🏛️</span><div id="stat-cinemas" class="stat-num">—</div><div class="stat-label">Кинотеатров</div></div>
+    <div class="stat-card"><span class="stat-icon">🎥</span><div id="stat-movies" class="stat-num">—</div><div class="stat-label">Фильмов</div></div>
+    <div class="stat-card"><span class="stat-icon">👥</span><div id="stat-viewers" class="stat-num">—</div><div class="stat-label">Зрителей</div></div>
+    <div class="stat-card"><span class="stat-icon">🎟️</span><div id="stat-tickets" class="stat-num">—</div><div class="stat-label">Билетов продано</div></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-header">
+    <h2>🔥 Сейчас в прокате</h2>
+    <a href="movies.html" class="btn btn-sm">Все фильмы →</a>
+  </div>
+  <div id="featured-movies" class="movies-grid">
+    <div class="skeleton"></div><div class="skeleton"></div>
+    <div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</section>
+
+<section class="section section-dark">
+  <div class="section-header">
+    <h2>🏛️ Наши кинотеатры</h2>
+    <a href="cinemas.html" class="btn btn-sm">Все →</a>
+  </div>
+  <div id="featured-cinemas" class="cinemas-list">
+    <div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">🎬 CineErmurat</div>
+    <p>Система бронирования билетов &nbsp;|&nbsp; Автор: <strong>Ермурат</strong></p>
+    <p class="footer-copy">© 2026 CineErmurat. Все права защищены.</p>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script>
+  function genreEmoji(g) {
+    const m={'Драма':'🎭','Научная фантастика':'🚀','Боевик':'💥','Триллер':'😱','Комедия':'😂','Ужасы':'👻','Мелодрама':'💕'};
+    return m[g]||'🎬';
+  }
+  async function loadStats() {
+    const [c,m,v,t] = await Promise.all([API.getCinemas(),API.getMovies(),API.getViewers(),API.getTickets()]);
+    document.getElementById('stat-cinemas').textContent=c.length;
+    document.getElementById('stat-movies').textContent=m.length;
+    document.getElementById('stat-viewers').textContent=v.length;
+    document.getElementById('stat-tickets').textContent=t.length;
+  }
+  async function loadFeaturedMovies() {
+    const movies = await API.getMovies();
+    const el = document.getElementById('featured-movies');
+    el.innerHTML='';
+    movies.slice(0,4).forEach(m=>{
+      el.innerHTML+=`
+      <div class="movie-card">
+        <div class="movie-poster">${genreEmoji(m.genre)}</div>
+        <div class="movie-info">
+          <h3>${m.title}</h3>
+          <div class="movie-meta">
+            <span class="badge">${m.genre}</span>
+            <span class="badge badge-dark">⏱ ${m.durationMinutes} мин</span>
+          </div>
+          <p class="movie-director">Режиссёр: ${m.director}</p>
+          <p class="movie-time">🕐 ${m.showTime}</p>
+          <div class="movie-footer">
+            <span class="price">${m.price.toLocaleString()} ₸</span>
+            <span class="seats ${m.availableSeats<10?'seats-low':''}">💺 ${m.availableSeats} мест</span>
+          </div>
+          <a href="tickets.html?movieId=${m.id}" class="btn btn-primary btn-full">Купить билет</a>
+        </div>
+      </div>`;
+    });
+  }
+  async function loadFeaturedCinemas() {
+    const list = await API.getCinemas();
+    const el = document.getElementById('featured-cinemas');
+    el.innerHTML='';
+    list.forEach(c=>{
+      el.innerHTML+=`
+      <div class="cinema-card">
+        <div class="cinema-icon">🏛️</div>
+        <div class="cinema-info">
+          <h3>${c.name}</h3>
+          <p>📍 ${c.address}, ${c.city}</p>
+          <p>📞 ${c.phone}</p>
+          <p>💺 Всего мест: <strong>${c.totalSeats}</strong></p>
+        </div>
+      </div>`;
+    });
+  }
+  loadStats(); loadFeaturedMovies(); loadFeaturedCinemas();
+</script>
+</body>
+</html>
+

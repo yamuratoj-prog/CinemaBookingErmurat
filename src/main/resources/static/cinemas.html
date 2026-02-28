@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineErmurat — Кинотеатры</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">🎬 CineErmurat</div>
+  <ul class="nav-links">
+    <li><a href="index.html">Главная</a></li>
+    <li><a href="movies.html">Фильмы</a></li>
+    <li><a href="cinemas.html" class="active">Кинотеатры</a></li>
+    <li><a href="viewers.html">Зрители</a></li>
+    <li><a href="tickets.html">Билеты</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🏛️ Кинотеатры</h1>
+  <p>Управление кинотеатрами сети CineErmurat</p>
+</div>
+
+<div class="toolbar">
+  <input class="search-input" id="search" placeholder="🔍 Поиск по названию или городу..."/>
+  <button class="btn btn-primary" onclick="openAddModal()">＋ Добавить кинотеатр</button>
+</div>
+
+<div class="section" style="padding-top:30px">
+  <div id="cinemas-container" class="cinemas-list">
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</div>
+
+<!-- Модалка: добавить/редактировать -->
+<div class="modal-overlay" id="modal-cinema">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-cinema-title">➕ Новый кинотеатр</h3>
+      <button class="modal-close" onclick="closeModal('modal-cinema')">✕</button>
+    </div>
+    <form id="cinema-form" onsubmit="submitCinema(event)">
+      <input type="hidden" id="cinema-id"/>
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input class="form-input" id="cinema-name" placeholder="Кинотеатр Ермурат" required/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Город</label>
+          <input class="form-input" id="cinema-city" placeholder="Алматы" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Всего мест</label>
+          <input class="form-input" id="cinema-seats" type="number" min="1" placeholder="200" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Адрес</label>
+        <input class="form-input" id="cinema-address" placeholder="ул. Абая 10" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Телефон</label>
+        <input class="form-input" id="cinema-phone" placeholder="+7-727-000-00-00" required/>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-cinema')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Модалка: фильмы кинотеатра -->
+<div class="modal-overlay" id="modal-cinema-movies">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 id="modal-cinema-movies-title">🎥 Фильмы кинотеатра</h3>
+      <button class="modal-close" onclick="closeModal('modal-cinema-movies')">✕</button>
+    </div>
+    <div id="cinema-movies-list" style="max-height:400px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">🎬 CineErmurat</div>
+    <p>Автор: <strong>Ермурат</strong> &nbsp;|&nbsp; © 2026</p>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+<script>
+  let allCinemas = [];
+
+  async function init() {
+    allCinemas = await API.getCinemas();
+    renderCinemas(allCinemas);
+  }
+
+  function renderCinemas(list) {
+    const el = document.getElementById('cinemas-container');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏛️</div><p>Кинотеатры не найдены</p></div>';
+      return;
+    }
+    el.innerHTML = '';
+    list.forEach(c => {
+      el.innerHTML += `
+        <div class="cinema-card" style="flex-direction:column;gap:0;padding:0;overflow:hidden">
+          <div style="background:linear-gradient(135deg,var(--dark3),var(--dark4));padding:22px 24px;display:flex;align-items:center;gap:16px">
+            <div style="font-size:2.5em">🏛️</div>
+            <div>
+              <h3 style="font-size:1.1em;font-weight:800">${c.name}</h3>
+              <span class="badge badge-dark">📍 ${c.city}</span>
+            </div>
+          </div>
+          <div style="padding:18px 24px">
+            <p style="font-size:.88em;color:var(--grey);margin-bottom:6px">📍 ${c.address}</p>
+            <p style="font-size:.88em;color:var(--grey);margin-bottom:6px">📞 ${c.phone}</p>
+            <p style="font-size:.88em;color:var(--grey)">💺 Мест: <strong style="color:var(--light)">${c.totalSeats}</strong></p>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid var(--dark4);display:flex;gap:10px">
+            <button class="btn btn-sm" onclick="showMovies(${c.id},'${c.name.replace(/'/g,"\\'")}')">🎥 Фильмы</button>
+            <button class="btn btn-sm" onclick="editCinema(${c.id})">✏️ Изменить</button>
+            <button class="btn btn-danger" onclick="removeCinema(${c.id})">🗑️ Удалить</button>
+          </div>
+        </div>`;
+    });
+  }
+
+  document.getElementById('search').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    renderCinemas(allCinemas.filter(c =>
+      c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q)
+    ));
+  });
+
+  function openAddModal() {
+    document.getElementById('modal-cinema-title').textContent = '➕ Новый кинотеатр';
+    document.getElementById('cinema-form').reset();
+    document.getElementById('cinema-id').value = '';
+    openModal('modal-cinema');
+  }
+
+  function editCinema(id) {
+    const c = allCinemas.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('modal-cinema-title').textContent = '✏️ Редактировать';
+    document.getElementById('cinema-id').value      = c.id;
+    document.getElementById('cinema-name').value    = c.name;
+    document.getElementById('cinema-city').value    = c.city;
+    document.getElementById('cinema-seats').value   = c.totalSeats;
+    document.getElementById('cinema-address').value = c.address;
+    document.getElementById('cinema-phone').value   = c.phone;
+    openModal('modal-cinema');
+  }
+
+  async function submitCinema(e) {
+    e.preventDefault();
+    const id = document.getElementById('cinema-id').value;
+    const data = {
+      name:       document.getElementById('cinema-name').value,
+      city:       document.getElementById('cinema-city').value,
+      totalSeats: parseInt(document.getElementById('cinema-seats').value),
+      address:    document.getElementById('cinema-address').value,
+      phone:      document.getElementById('cinema-phone').value,
+    };
+    try {
+      if (id) { await API.updateCinema(id, data); showToast('Кинотеатр обновлён ✅'); }
+      else     { await API.createCinema(data);     showToast('Кинотеатр добавлен ✅'); }
+      closeModal('modal-cinema');
+      allCinemas = await API.getCinemas();
+      renderCinemas(allCinemas);
+    } catch(err) { showToast(err.error || 'Ошибка', 'error'); }
+  }
+
+  async function removeCinema(id) {
+    const ok = await confirmAction('Удалить кинотеатр? Все связанные фильмы могут остаться без привязки.');
+    if (!ok) return;
+    try {
+      await API.deleteCinema(id);
+      showToast('Кинотеатр удалён');
+      allCinemas = await API.getCinemas();
+      renderCinemas(allCinemas);
+    } catch(err) { showToast(err.error || 'Ошибка', 'error'); }
+  }
+
+  async function showMovies(cinemaId, cinemaName) {
+    document.getElementById('modal-cinema-movies-title').textContent = `🎥 ${cinemaName}`;
+    const el = document.getElementById('cinema-movies-list');
+    el.innerHTML = '<div class="skeleton" style="height:80px;margin:10px 0"></div>';
+    openModal('modal-cinema-movies');
+    try {
+      const movies = await API.moviesByCinema(cinemaId);
+      if (!movies.length) { el.innerHTML = '<div class="empty-state" style="padding:40px"><p>Нет фильмов</p></div>'; return; }
+      el.innerHTML = movies.map(m => `
+        <div style="display:flex;align-items:center;gap:14px;padding:14px;border-bottom:1px solid var(--dark4)">
+          <div style="font-size:2em">${genreEmoji(m.genre)}</div>
+          <div style="flex:1">
+            <strong>${m.title}</strong>
+            <div style="font-size:.82em;color:var(--grey);margin-top:4px">${m.genre} &bull; ${m.durationMinutes} мин &bull; 🕐 ${m.showTime}</div>
+          </div>
+          <div>
+            <div style="font-weight:800;color:var(--gold)">${m.price.toLocaleString()} ₸</div>
+            <div style="font-size:.78em;color:var(--grey);text-align:right">💺 ${m.availableSeats}</div>
+          </div>
+        </div>`).join('');
+    } catch { el.innerHTML = '<div class="empty-state"><p>Нет фильмов в этом кинотеатре</p></div>'; }
+  }
+
+  init();
+</script>
+</body>
+</html>
+
