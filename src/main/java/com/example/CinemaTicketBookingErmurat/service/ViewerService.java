@@ -1,60 +1,51 @@
 package com.example.CinemaTicketBookingErmurat.service;
 
 import com.example.CinemaTicketBookingErmurat.model.Viewer;
+import com.example.CinemaTicketBookingErmurat.repository.ViewerRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class ViewerService {
 
-    private final List<Viewer> viewers = new ArrayList<>();
-    private final AtomicLong idCounter = new AtomicLong(1);
-
-    public ViewerService() {
-        // Предзаполненные данные
-        viewers.add(new Viewer(idCounter.getAndIncrement(), "Ермурат", "Досов",
-                "ermurat@mail.ru", "+7-705-111-22-33", 22));
-        viewers.add(new Viewer(idCounter.getAndIncrement(), "Айгерим", "Бекова",
-                "aigrim@mail.ru", "+7-705-444-55-66", 25));
-        viewers.add(new Viewer(idCounter.getAndIncrement(), "Нурлан", "Абенов",
-                "nurlan@mail.ru", "+7-707-777-88-99", 30));
-    }
+    @Autowired
+    private ViewerRepository viewerRepository;
 
     public List<Viewer> getAllViewers() {
-        return new ArrayList<>(viewers);
+        return viewerRepository.findAll();
     }
 
     public Optional<Viewer> getViewerById(Long id) {
-        return viewers.stream().filter(v -> v.getId().equals(id)).findFirst();
+        return viewerRepository.findById(id);
+    }
+
+    public Optional<Viewer> getViewerByEmail(String email) {
+        return viewerRepository.findByEmail(email);
     }
 
     public Viewer createViewer(Viewer viewer) {
-        viewer.setId(idCounter.getAndIncrement());
-        viewers.add(viewer);
-        return viewer;
+        return viewerRepository.save(viewer);
     }
 
     public Optional<Viewer> updateViewer(Long id, Viewer updatedViewer) {
-        return viewers.stream().filter(v -> v.getId().equals(id)).findFirst().map(v -> {
-            v.setFirstName(updatedViewer.getFirstName());
-            v.setLastName(updatedViewer.getLastName());
-            v.setEmail(updatedViewer.getEmail());
-            v.setPhone(updatedViewer.getPhone());
-            v.setAge(updatedViewer.getAge());
-            return v;
+        return viewerRepository.findById(id).map(viewer -> {
+            viewer.setFirstName(updatedViewer.getFirstName());
+            viewer.setLastName(updatedViewer.getLastName());
+            viewer.setEmail(updatedViewer.getEmail());
+            viewer.setPhone(updatedViewer.getPhone());
+            viewer.setAge(updatedViewer.getAge());
+            return viewerRepository.save(viewer);
         });
     }
 
     public boolean deleteViewer(Long id) {
-        return viewers.removeIf(v -> v.getId().equals(id));
-    }
-
-    public Optional<Viewer> getViewerByEmail(String email) {
-        return viewers.stream().filter(v -> v.getEmail().equalsIgnoreCase(email)).findFirst();
+        if (viewerRepository.existsById(id)) {
+            viewerRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 }
-

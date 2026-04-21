@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CineErmurat — Главная</title>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="/css/style.css"/>
 </head>
 <body>
 
 <nav class="navbar">
   <div class="nav-brand">🎬 CineErmurat</div>
   <ul class="nav-links">
-    <li><a href="index.html" class="active">Главная</a></li>
-    <li><a href="movies.html">Фильмы</a></li>
-    <li><a href="cinemas.html">Кинотеатры</a></li>
-    <li><a href="viewers.html">Зрители</a></li>
-    <li><a href="tickets.html">Билеты</a></li>
-    <li><a href="login.html">Войти</a></li>
-    <li><a href="register.html">Регистрация</a></li>
+    <li><a href="/" class="active">Главная</a></li>
+    <li><a href="/movies">Фильмы</a></li>
+    <li><a href="/cinemas">Кинотеатры</a></li>
+    <li><a href="/viewers">Зрители</a></li>
+    <li><a href="/tickets">Билеты</a></li>
+    <li><a href="/login">Войти</a></li>
+    <li><a href="/register">Регистрация</a></li>
   </ul>
 </nav>
 
@@ -26,8 +26,8 @@
     <h1>Добро пожаловать в<br/><span>CineErmurat</span></h1>
     <p>Система онлайн-бронирования билетов в кинотеатр.<br/>Выбирай фильм, выбирай место — и наслаждайся!</p>
     <div class="hero-btns">
-      <a href="movies.html" class="btn btn-primary">🎥 Смотреть фильмы</a>
-      <a href="tickets.html" class="btn btn-outline">🎟️ Мои билеты</a>
+      <a href="/movies" class="btn btn-primary">🎥 Смотреть фильмы</a>
+      <a href="/tickets" class="btn btn-outline">🎟️ Мои билеты</a>
     </div>
   </div>
   <div class="hero-visual"><div class="film-reel">🎞️</div></div>
@@ -45,7 +45,7 @@
 <section class="section">
   <div class="section-header">
     <h2>🔥 Сейчас в прокате</h2>
-    <a href="movies.html" class="btn btn-sm">Все фильмы →</a>
+    <a href="/movies" class="btn btn-sm">Все фильмы →</a>
   </div>
   <div id="featured-movies" class="movies-grid">
     <div class="skeleton"></div><div class="skeleton"></div>
@@ -56,7 +56,7 @@
 <section class="section section-dark">
   <div class="section-header">
     <h2>🏛️ Наши кинотеатры</h2>
-    <a href="cinemas.html" class="btn btn-sm">Все →</a>
+    <a href="/cinemas" class="btn btn-sm">Все →</a>
   </div>
   <div id="featured-cinemas" class="cinemas-list">
     <div class="skeleton"></div><div class="skeleton"></div>
@@ -71,7 +71,7 @@
   </div>
 </footer>
 
-<script src="js/api.js"></script>
+<script src="/js/api.js"></script>
 <script>
   function genreEmoji(g) {
     const m={'Драма':'🎭','Научная фантастика':'🚀','Боевик':'💥','Триллер':'😱','Комедия':'😂','Ужасы':'👻','Мелодрама':'💕'};
@@ -104,7 +104,7 @@
             <span class="price">${m.price.toLocaleString()} ₸</span>
             <span class="seats ${m.availableSeats<10?'seats-low':''}">💺 ${m.availableSeats} мест</span>
           </div>
-          <a href="tickets.html?movieId=${m.id}" class="btn btn-primary btn-full">Купить билет</a>
+          <a href="/tickets?movieId=${m.id}" class="btn btn-primary btn-full">Купить билет</a>
         </div>
       </div>`;
     });

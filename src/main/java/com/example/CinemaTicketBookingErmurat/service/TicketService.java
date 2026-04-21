@@ -2,34 +2,30 @@ package com.example.CinemaTicketBookingErmurat.service;
 
 import com.example.CinemaTicketBookingErmurat.model.Movie;
 import com.example.CinemaTicketBookingErmurat.model.Ticket;
+import com.example.CinemaTicketBookingErmurat.repository.TicketRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class TicketService {
 
-    private final List<Ticket> tickets = new ArrayList<>();
-    private final AtomicLong idCounter = new AtomicLong(1);
-    private final MovieService movieService;
+    @Autowired
+    private TicketRepository ticketRepository;
 
     @Autowired
-    public TicketService(MovieService movieService) {
-        this.movieService = movieService;
-    }
+    private MovieService movieService;
 
     public List<Ticket> getAllTickets() {
-        return new ArrayList<>(tickets);
+        return ticketRepository.findAll();
     }
 
     public Optional<Ticket> getTicketById(Long id) {
-        return tickets.stream().filter(t -> t.getId().equals(id)).findFirst();
+        return ticketRepository.findById(id);
     }
 
     public Ticket bookTicket(Long viewerId, Long movieId, String seatNumber) {
@@ -43,21 +39,19 @@ public class TicketService {
         }
 
         // Проверяем занятость места
-        boolean seatTaken = tickets.stream()
-                .anyMatch(t -> t.getMovieId().equals(movieId)
-                        && t.getSeatNumber().equalsIgnoreCase(seatNumber)
-                        && "BOOKED".equals(t.getStatus()));
+        boolean seatTaken = ticketRepository.findByMovieIdAndSeatNumberAndStatus(movieId, seatNumber, "BOOKED").isPresent();
         if (seatTaken) {
             throw new RuntimeException("Место " + seatNumber + " уже занято");
         }
 
         movie.setAvailableSeats(movie.getAvailableSeats() - 1);
+        movieService.createMovie(movie); // обновляем фильм
 
         String bookingTime = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         Ticket ticket = new Ticket(
-                idCounter.getAndIncrement(),
+                null, // id будет сгенерирован
                 viewerId,
                 movieId,
                 movie.getCinemaId(),
@@ -66,44 +60,32 @@ public class TicketService {
                 bookingTime,
                 "BOOKED"
         );
-        tickets.add(ticket);
-        return ticket;
+        return ticketRepository.save(ticket);
     }
 
     public boolean cancelTicket(Long ticketId) {
-        Optional<Ticket> ticketOpt = tickets.stream()
-                .filter(t -> t.getId().equals(ticketId)).findFirst();
+        Optional<Ticket> ticketOpt = ticketRepository.findById(ticketId);
         if (ticketOpt.isEmpty()) return false;
 
         Ticket ticket = ticketOpt.get();
         if ("CANCELLED".equals(ticket.getStatus())) return false;
 
         ticket.setStatus("CANCELLED");
+        ticketRepository.save(ticket);
 
         // Возвращаем место
-        movieService.getMovieById(ticket.getMovieId()).ifPresent(m ->
-                m.setAvailableSeats(m.getAvailableSeats() + 1));
+        movieService.getMovieById(ticket.getMovieId()).ifPresent(m -> {
+            m.setAvailableSeats(m.getAvailableSeats() + 1);
+            movieService.createMovie(m);
+        });
         return true;
     }
 
     public List<Ticket> getTicketsByViewer(Long viewerId) {
-        List<Ticket> result = new ArrayList<>();
-        for (Ticket t : tickets) {
-            if (t.getViewerId().equals(viewerId)) {
-                result.add(t);
-            }
-        }
-        return result;
+        return ticketRepository.findByViewerId(viewerId);
     }
 
     public List<Ticket> getTicketsByMovie(Long movieId) {
-        List<Ticket> result = new ArrayList<>();
-        for (Ticket t : tickets) {
-            if (t.getMovieId().equals(movieId)) {
-                result.add(t);
-            }
-        }
-        return result;
+        return ticketRepository.findByMovieId(movieId);
     }
 }
-

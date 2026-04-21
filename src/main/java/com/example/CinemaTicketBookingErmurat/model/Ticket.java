@@ -1,14 +1,33 @@
 package com.example.CinemaTicketBookingErmurat.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "tickets")
 public class Ticket {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "viewer_id")
     private Long viewerId;
+
+    @Column(name = "movie_id")
     private Long movieId;
+
+    @Column(name = "cinema_id")
     private Long cinemaId;
+
+    @Column(name = "seat_number")
     private String seatNumber;
+
+    @Column(name = "total_price")
     private double totalPrice;
+
+    @Column(name = "booking_time")
     private String bookingTime;
+
     private String status; // BOOKED, CANCELLED
 
     public Ticket() {}
@@ -49,4 +68,3 @@ public class Ticket {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 }
-

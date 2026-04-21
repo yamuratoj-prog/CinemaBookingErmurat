@@ -1,12 +1,26 @@
 package com.example.CinemaTicketBookingErmurat.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "viewers")
 public class Viewer {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String firstName;
+
+    @Column(nullable = false)
     private String lastName;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
     private String phone;
+
     private int age;
 
     public Viewer() {}

@@ -1,16 +1,28 @@
 package com.example.CinemaTicketBookingErmurat.model;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
+@Table(name = "cinemas")
 public class Cinema {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String name;
+
     private String address;
     private String city;
     private String phone;
+
+    @Column(name = "total_seats")
     private int totalSeats;
+
+    @OneToMany(mappedBy = "cinemaId", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Movie> movies = new ArrayList<>();
 
     public Cinema() {}

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineErmurat — Фильмы</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">🎬 CineErmurat</div>
+  <ul class="nav-links">
+    <li><a href="/">Главная</a></li>
+    <li><a href="/movies" class="active">Фильмы</a></li>
+    <li><a href="/cinemas">Кинотеатры</a></li>
+    <li><a href="/viewers">Зрители</a></li>
+    <li><a href="/tickets">Билеты</a></li>
+    <li><a href="/login">Войти</a></li>
+    <li><a href="/register">Регистрация</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🎥 Все фильмы</h1>
+  <p>Выберите фильм и забронируйте билет онлайн</p>
+</div>
+
+<div class="toolbar">
+  <input class="search-input" id="search" placeholder="🔍 Поиск по названию..."/>
+  <select class="select-input" id="filter-genre">
+    <option value="">Все жанры</option>
+    <option>Драма</option>
+    <option>Научная фантастика</option>
+    <option>Боевик</option>
+    <option>Триллер</option>
+    <option>Комедия</option>
+    <option>Ужасы</option>
+    <option>Мелодрама</option>
+    <option>Документальный</option>
+    <option>Анимация</option>
+  </select>
+  <select class="select-input" id="filter-cinema">
+    <option value="">Все кинотеатры</option>
+  </select>
+</div>
+
+<div class="section" style="padding-top:30px">
+  <div id="movies-container" class="movies-grid">
+    <div class="skeleton"></div><div class="skeleton"></div>
+    <div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</div>
+
+<!-- Модальные окна для добавления/редактирования -->
+<div id="modal-add-movie" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('modal-add-movie')">&times;</span>
+    <h2>Добавить фильм</h2>
+    <form id="add-movie-form">
+      <div class="form-group">
+        <label>Название:</label>
+        <input type="text" name="title" required>
+      </div>
+      <div class="form-group">
+        <label>Жанр:</label>
+        <input type="text" name="genre" required>
+      </div>
+      <div class="form-group">
+        <label>Режиссёр:</label>
+        <input type="text" name="director" required>
+      </div>
+      <div class="form-group">
+        <label>Длительность (мин):</label>
+        <input type="number" name="durationMinutes" required>
+      </div>
+      <div class="form-group">
+        <label>Цена:</label>
+        <input type="number" step="0.01" name="price" required>
+      </div>
+      <div class="form-group">
+        <label>Время показа:</label>
+        <input type="text" name="showTime" required>
+      </div>
+      <div class="form-group">
+        <label>Свободных мест:</label>
+        <input type="number" name="availableSeats" required>
+      </div>
+      <div class="form-group">
+        <label>Кинотеатр ID:</label>
+        <input type="number" name="cinemaId" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Добавить</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  let allMovies = [];
+  let allCinemas = [];
+
+  async function loadMovies() {
+    allMovies = await API.getMovies();
+    allCinemas = await API.getCinemas();
+    populateCinemaFilter();
+    renderMovies(allMovies);
+  }
+
+  function populateCinemaFilter() {
+    const select = document.getElementById('filter-cinema');
+    allCinemas.forEach(c => {
+      const option = document.createElement('option');
+      option.value = c.id;
+      option.textContent = c.name;
+      select.appendChild(option);
+    });
+  }
+
+  function renderMovies(movies) {
+    const container = document.getElementById('movies-container');
+    container.innerHTML = '';
+    movies.forEach(m => {
+      container.innerHTML += `
+      <div class="movie-card">
+        <div class="movie-poster">${genreEmoji(m.genre)}</div>
+        <div class="movie-info">
+          <h3>${m.title}</h3>
+          <div class="movie-meta">
+            <span class="badge">${m.genre}</span>
+            <span class="badge badge-dark">⏱ ${m.durationMinutes} мин</span>
+          </div>
+          <p class="movie-director">Режиссёр: ${m.director}</p>
+          <p class="movie-time">🕐 ${m.showTime}</p>
+          <div class="movie-footer">
+            <span class="price">${m.price.toLocaleString()} ₸</span>
+            <span class="seats ${m.availableSeats<10?'seats-low':''}">💺 ${m.availableSeats} мест</span>
+          </div>
+          <a href="/tickets?movieId=${m.id}" class="btn btn-primary btn-full">Купить билет</a>
+        </div>
+      </div>`;
+    });
+  }
+
+  function genreEmoji(g) {
+    const m={'Драма':'🎭','Научная фантастика':'🚀','Боевик':'💥','Триллер':'😱','Комедия':'😂','Ужасы':'👻','Мелодрама':'💕'};
+    return m[g]||'🎬';
+  }
+
+  // Фильтры
+  document.getElementById('search').addEventListener('input', filterMovies);
+  document.getElementById('filter-genre').addEventListener('change', filterMovies);
+  document.getElementById('filter-cinema').addEventListener('change', filterMovies);
+
+  function filterMovies() {
+    const search = document.getElementById('search').value.toLowerCase();
+    const genre = document.getElementById('filter-genre').value;
+    const cinemaId = document.getElementById('filter-cinema').value;
+
+    let filtered = allMovies.filter(m =>
+      m.title.toLowerCase().includes(search) &&
+      (genre === '' || m.genre === genre) &&
+      (cinemaId === '' || m.cinemaId == cinemaId)
+    );
+    renderMovies(filtered);
+  }
+
+  // Добавление фильма
+  document.getElementById('add-movie-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    data.availableSeats = parseInt(data.availableSeats);
+    data.durationMinutes = parseInt(data.durationMinutes);
+    data.price = parseFloat(data.price);
+    data.cinemaId = parseInt(data.cinemaId);
+
+    try {
+      await API.createMovie(data);
+      closeModal('modal-add-movie');
+      loadMovies();
+    } catch (error) {
+      alert('Ошибка добавления фильма: ' + error.error);
+    }
+  });
+
+  function openModal(id) { document.getElementById(id).style.display = 'block'; }
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+  loadMovies();
+</script>
+</body>
+</html>

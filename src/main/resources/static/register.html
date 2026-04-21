@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - CineErmurat</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">🎬 CineErmurat</div>
+        <ul class="nav-links">
+            <li><a href="/">Главная</a></li>
+            <li><a href="/login">Войти</a></li>
+        </ul>
+    </nav>
+
+    <section class="section">
+        <div class="container">
+            <h2>Регистрация</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="username">Имя пользователя:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Пароль:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+            </form>
+            <div id="confirmationSection" style="display: none;">
+                <h3>Подтверждение email</h3>
+                <p>Проверьте ваш email и введите код подтверждения:</p>
+                <input type="text" id="confirmationCode" placeholder="Код подтверждения">
+                <button id="confirmBtn" class="btn btn-primary">Подтвердить</button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.text();
+                alert(result);
+                if (response.ok) {
+                    document.getElementById('registerForm').style.display = 'none';
+                    document.getElementById('confirmationSection').style.display = 'block';
+                }
+            } catch (error) {
+                alert('Ошибка: ' + error.message);
+            }
+        });
+
+        document.getElementById('confirmBtn').addEventListener('click', async () => {
+            const code = document.getElementById('confirmationCode').value;
+            try {
+                const response = await fetch('/api/auth/confirm?token=' + code);
+                const result = await response.text();
+                alert(result);
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                alert('Ошибка: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

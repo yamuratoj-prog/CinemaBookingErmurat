@@ -1,15 +1,33 @@
 package com.example.CinemaTicketBookingErmurat.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "movies")
 public class Movie {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String title;
+
     private String genre;
     private String director;
+
+    @Column(name = "duration_minutes")
     private int durationMinutes;
+
     private double price;
+
+    @Column(name = "show_time")
     private String showTime;
+
+    @Column(name = "available_seats")
     private int availableSeats;
+
+    @Column(name = "cinema_id")
     private Long cinemaId;
 
     public Movie() {}
